@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pitch Deck — Holographic Glass</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #05030e;
+    --accent: #a855f7;
+    --accent2: #ec4899;
+    --purple-mid: #5b21b6;
+    --purple-light: #c4b5fd;
+    --text: #f5f3ff;
+    --text-muted: rgba(196,181,253,.7);
+  }
+
+  html, body { width:100%; height:100%; background:var(--bg); font-family:'Inter',sans-serif; color:var(--text); overflow:hidden; }
+
+  .deck { width:100vw; height:100vh; position:relative; display:flex; align-items:center; justify-content:center; }
+
+  .slide {
+    width:1280px; height:720px; position:absolute;
+    opacity:0; transform:translateX(70px) scale(0.96);
+    transition:opacity .65s cubic-bezier(.4,0,.2,1), transform .65s cubic-bezier(.4,0,.2,1);
+    pointer-events:none; display:flex; overflow:hidden; border-radius:24px;
+    border:1px solid rgba(139,92,246,.18);
+    box-shadow:0 0 120px rgba(139,92,246,.1);
+  }
+  .slide.active  { opacity:1; transform:translateX(0) scale(1); pointer-events:all; }
+  .slide.exit    { opacity:0; transform:translateX(-70px) scale(0.96); }
+
+  /* Orbs */
+  .orb { position:absolute; border-radius:50%; filter:blur(90px); pointer-events:none; z-index:0; }
+  .orb-a { width:600px;height:600px; background:radial-gradient(circle,rgba(139,92,246,.42)0%,transparent 70%); top:-180px;left:-120px; }
+  .orb-b { width:450px;height:450px; background:radial-gradient(circle,rgba(168,85,247,.3)0%,transparent 70%); bottom:-120px;right:60px; }
+  .orb-c { width:350px;height:350px; background:radial-gradient(circle,rgba(236,72,153,.25)0%,transparent 70%); top:160px;right:-80px; }
+
+  /* Grid */
+  .grid-lines { position:absolute;inset:0;z-index:0; background-image:linear-gradient(rgba(139,92,246,.07)1px,transparent 1px),linear-gradient(90deg,rgba(139,92,246,.07)1px,transparent 1px); background-size:64px 64px; pointer-events:none; }
+
+  /* ══════════════════════════════════
+     GLASSMORPHISM
+  ══════════════════════════════════ */
+  .glass {
+    background:rgba(139,92,246,.09);
+    border:1px solid rgba(139,92,246,.38);
+    backdrop-filter:blur(40px) saturate(200%) brightness(115%);
+    -webkit-backdrop-filter:blur(40px) saturate(200%) brightness(115%);
+    border-radius:18px; position:relative; overflow:hidden;
+    box-shadow:
+      0 0 0 1px rgba(139,92,246,.18),
+      0 8px 40px rgba(0,0,0,.5),
+      0 0 60px rgba(139,92,246,.16),
+      inset 0 1px 0 rgba(255,255,255,.2),
+      inset 0 -1px 0 rgba(139,92,246,.12),
+      inset 1px 0 0 rgba(255,255,255,.06);
+  }
+  .glass::before {
+    content:''; position:absolute; top:0; left:10%; right:10%; height:1px;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.48),transparent);
+    pointer-events:none; z-index:1;
+  }
+  .glass::after {
+    content:''; position:absolute; inset:0;
+    background:linear-gradient(135deg,rgba(255,255,255,.07)0%,rgba(255,255,255,.02)40%,transparent 60%);
+    pointer-events:none; z-index:1;
+  }
+
+  /* ══════════════════════════════════
+     HOLOGRAPHIC GLASS CUBE
+  ══════════════════════════════════ */
+
+  /* Floating animation */
+  @keyframes cube-float {
+    0%,100% { transform:translateY(0px); }
+    50%      { transform:translateY(-16px); }
+  }
+  /* Spin animation */
+  @keyframes cube-spin {
+    from { transform:rotateX(-22deg) rotateY(0deg); }
+    to   { transform:rotateX(-22deg) rotateY(360deg); }
+  }
+
+  .cube-wrap {
+    position:absolute; right:72px; top:50%; transform:translateY(-50%);
+    z-index:3;
+    filter:
+      drop-shadow(0 0 28px rgba(139,92,246,.75))
+      drop-shadow(0 0 56px rgba(139,92,246,.38))
+      drop-shadow(0 0 100px rgba(139,92,246,.18));
+    animation:cube-float 5.5s ease-in-out infinite;
+  }
+  .cube-wrap.left { right:auto; left:60px; }
+  .cube-wrap.right{ right:64px; }
+
+  .cube-scene {
+    perspective:800px;
+    perspective-origin:50% 45%;
+  }
+
+  .holo-cube {
+    position:relative;
+    transform-style:preserve-3d;
+    animation:cube-spin 22s linear infinite;
+  }
+
+  /* ── Face base ──
+     Layer 1 (top): dark ellipse that blocks the center → hollow look
+     Layer 2: bright specular rim at the transition edge
+     Layer 3 (bottom): full-face conic rainbow gradient
+  */
+  .hf {
+    position:absolute;
+    background:
+      /* dark hollow center */
+      radial-gradient(ellipse 66% 66% at 50% 50%,
+        rgba(5,3,14,.94) 0%,
+        rgba(5,3,14,.94) 54%,
+        rgba(8,4,22,.55)  66%,
+        transparent      78%
+      ),
+      /* specular rim highlight (white ring at the glass-edge boundary) */
+      radial-gradient(ellipse 66% 66% at 50% 50%,
+        transparent      52%,
+        rgba(255,255,255,.22) 55%,
+        rgba(255,255,255,.08) 59%,
+        transparent      63%
+      ),
+      /* chromatic rainbow - conic rotated per face */
+      conic-gradient(from var(--hue,0deg) at 50% 50%,
+        rgba(255,0,90,1.0)    0deg,
+        rgba(0,50,255,1.0)   60deg,
+        rgba(0,220,200,.95) 120deg,
+        rgba(80,255,60,.85)  180deg,
+        rgba(255,160,0,.95)  240deg,
+        rgba(200,0,255,1.0)  300deg,
+        rgba(255,0,90,1.0)   360deg
+      );
+    border:1px solid rgba(200,180,255,.14);
+    overflow:hidden;
+    /* inner edge bevel */
+    box-shadow:inset 0 0 0 2px rgba(220,200,255,.12);
+  }
+
+  /* RGB chromatic aberration fringe — slight color smear on edges */
+  .hf::before {
+    content:''; position:absolute; inset:0;
+    background:
+      radial-gradient(ellipse 66% 66% at 50% 50%,
+        transparent 60%,
+        rgba(255,50,100,.22) 66%,
+        rgba(0,80,255,.22)   72%,
+        rgba(0,220,180,.18)  78%,
+        transparent          85%
+      );
+    pointer-events:none;
+  }
+
+  /* Reflection streak across the face */
+  .hf::after {
+    content:''; position:absolute; inset:0;
+    background:linear-gradient(calc(var(--hue,0deg) + 45deg), rgba(255,255,255,.06)0%, transparent 45%);
+    pointer-events:none;
+  }
+
+  /* Face sizes + positions (--cs = cube size px, set on .holo-cube) */
+  .hf { width:var(--cs); height:var(--cs); }
+  .hf-front  { --hue:  0deg; transform:translateZ(calc(var(--cs)/2)); }
+  .hf-back   { --hue: 60deg; transform:rotateY(180deg) translateZ(calc(var(--cs)/2)); }
+  .hf-right  { --hue:120deg; transform:rotateY( 90deg) translateZ(calc(var(--cs)/2)); }
+  .hf-left   { --hue:180deg; transform:rotateY(-90deg) translateZ(calc(var(--cs)/2)); }
+  .hf-top    { --hue:240deg; transform:rotateX( 90deg) translateZ(calc(var(--cs)/2)); }
+  .hf-bottom { --hue:300deg; transform:rotateX(-90deg) translateZ(calc(var(--cs)/2)); }
+
+  /* Ground glow reflection */
+  .cube-shadow {
+    position:absolute; bottom:-30px; left:50%;
+    transform:translateX(-50%);
+    border-radius:50%;
+    background:radial-gradient(ellipse 70% 40% at 50% 50%, rgba(139,92,246,.5)0%, transparent 70%);
+    filter:blur(12px);
+    pointer-events:none;
+  }
+
+  /* ── Neon helpers ── */
+  .neon-txt {
+    text-shadow:0 0 8px rgba(168,85,247,1),0 0 20px rgba(168,85,247,.8),0 0 45px rgba(168,85,247,.45),0 0 90px rgba(168,85,247,.2);
+  }
+
+  /* ── Nav ── */
+  .nav { position:fixed; bottom:32px; left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:16px; z-index:200; }
+  .nav-btn {
+    width:48px;height:48px; border-radius:50%;
+    background:rgba(139,92,246,.12); border:1px solid rgba(139,92,246,.45);
+    backdrop-filter:blur(16px); cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    color:var(--purple-light); font-size:20px;
+    box-shadow:0 0 16px rgba(139,92,246,.25);
+    transition:all .2s;
+  }
+  .nav-btn:hover { background:rgba(139,92,246,.28); box-shadow:0 0 28px rgba(139,92,246,.5); transform:scale(1.1); }
+  .nav-dots { display:flex; gap:8px; }
+  .dot { width:8px;height:8px;border-radius:4px; background:rgba(139,92,246,.3); border:1px solid rgba(139,92,246,.5); cursor:pointer; transition:all .3s; }
+  .dot.active { width:26px; background:var(--accent); box-shadow:0 0 10px rgba(168,85,247,.7); }
+  .counter { position:fixed; top:26px; right:36px; font-size:12px; color:var(--text-muted); font-weight:600; letter-spacing:.08em; z-index:200; }
+
+  /* ── Sparkles ── */
+  @keyframes sparkle { 0%,100%{opacity:.2;transform:scale(1);}50%{opacity:1;transform:scale(1.8);box-shadow:0 0 8px rgba(168,85,247,.9);} }
+  .sparkle { position:absolute; width:4px;height:4px; border-radius:50%; background:var(--accent); animation:sparkle 2.5s ease-in-out infinite; }
+
+  /* ── Shared text styles ── */
+  .section-h2 {
+    font-size:48px;font-weight:800;letter-spacing:-.02em;line-height:1.1;
+    background:linear-gradient(135deg,#fff 25%,var(--purple-light) 70%,var(--accent));
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+    margin-bottom:14px;
+  }
+  .section-tag {
+    font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--accent); display:flex;align-items:center;gap:10px; margin-bottom:18px;
+    text-shadow:0 0 12px rgba(168,85,247,.6);
+  }
+  .section-tag::before { content:''; width:28px;height:2px; background:var(--accent); box-shadow:0 0 8px rgba(168,85,247,.8); }
+  .section-sub { font-size:17px;color:var(--text-muted);line-height:1.65; }
+
+  /* ══════════════════════════════════
+     SLIDE 1
+  ══════════════════════════════════ */
+  #s1 { background:linear-gradient(135deg,#05030e 0%,#0f0720 55%,#05030e 100%); }
+  #s1 .content {
+    position:relative;z-index:2;
+    width:100%;height:100%;display:flex;flex-direction:column;
+    align-items:flex-start;justify-content:center;
+    padding:80px 0 80px 100px;
+  }
+  .badge {
+    display:inline-flex;align-items:center;gap:8px;
+    padding:6px 18px;border-radius:100px;
+    border:1px solid rgba(139,92,246,.5); background:rgba(139,92,246,.1);
+    backdrop-filter:blur(12px);
+    font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--purple-light);
+    margin-bottom:30px;
+    box-shadow:0 0 20px rgba(139,92,246,.25),inset 0 1px 0 rgba(255,255,255,.12);
+  }
+  .badge-dot { width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px rgba(168,85,247,.9); }
+  #s1 h1 {
+    font-size:78px;font-weight:900;line-height:1.0;letter-spacing:-.035em;
+    background:linear-gradient(140deg,#fff 0%,var(--purple-light) 45%,var(--accent) 80%,var(--accent2) 100%);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+    margin-bottom:26px;
+    filter:drop-shadow(0 0 30px rgba(168,85,247,.4));
+  }
+  #s1 .subtitle { font-size:18px;font-weight:400;color:var(--text-muted); max-width:500px;line-height:1.65;margin-bottom:48px; }
+  .cta-row { display:flex;gap:14px; }
+  .btn-primary {
+    padding:14px 38px;border-radius:100px;
+    background:linear-gradient(135deg,var(--purple-mid),var(--accent));
+    color:#fff;font-size:14px;font-weight:700;border:none;cursor:pointer;
+    box-shadow:0 0 28px rgba(139,92,246,.5),0 0 60px rgba(139,92,246,.2),inset 0 1px 0 rgba(255,255,255,.2);
+    transition:transform .2s,box-shadow .2s;
+  }
+  .btn-primary:hover { transform:translateY(-3px); box-shadow:0 0 44px rgba(139,92,246,.75),0 0 90px rgba(139,92,246,.3); }
+  .btn-secondary {
+    padding:14px 38px;border-radius:100px;
+    background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.45);
+    backdrop-filter:blur(12px);
+    color:var(--purple-light);font-size:14px;font-weight:700;cursor:pointer;
+    box-shadow:0 0 18px rgba(139,92,246,.15); transition:all .2s;
+  }
+  .btn-secondary:hover { background:rgba(139,92,246,.18);box-shadow:0 0 28px rgba(139,92,246,.3); }
+
+  /* Float-card (s1 right) */
+  @keyframes card-float {
+    0%,100%{transform:perspective(900px) rotateY(-14deg) rotateX(4deg) translateY(0);}
+    50%    {transform:perspective(900px) rotateY(-14deg) rotateX(4deg) translateY(-14px);}
+  }
+  .float-card {
+    position:absolute; right:72px; top:50%; transform:translateY(-50%);
+    width:268px; padding:28px 30px;
+    animation:card-float 5s ease-in-out infinite;
+    z-index:4;
+  }
+  .fc-val {
+    font-size:38px;font-weight:900;letter-spacing:-.02em;
+    background:linear-gradient(135deg,#fff 20%,var(--accent));
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+    filter:drop-shadow(0 0 10px rgba(168,85,247,.7));
+  }
+  .fc-label { font-size:12px;color:var(--text-muted);margin-top:3px;margin-bottom:14px; }
+  .fc-divider { height:1px;background:rgba(139,92,246,.3);margin-bottom:14px; }
+
+  /* ══════════════════════════════════
+     SLIDE 2
+  ══════════════════════════════════ */
+  #s2 { background:linear-gradient(145deg,#05030e 0%,#0d0520 100%); }
+  #s2 .content { position:relative;z-index:2;width:100%;display:flex;align-items:center;padding:70px 90px;gap:70px;height:100%; }
+  #s2 .left { flex:1.1; }
+  #s2 h2 { font-size:50px;font-weight:800;line-height:1.1;letter-spacing:-.02em;margin-bottom:22px; }
+  #s2 p { font-size:16px;color:var(--text-muted);line-height:1.7; }
+  #s2 .right { flex:1;display:flex;flex-direction:column;gap:14px; }
+  #s2 .pain-card { padding:22px 24px;display:flex;align-items:flex-start;gap:18px; }
+  #s2 .pain-icon {
+    width:46px;height:46px;border-radius:14px;flex-shrink:0;
+    background:linear-gradient(135deg,rgba(139,92,246,.25),rgba(168,85,247,.08));
+    border:1px solid rgba(139,92,246,.35);
+    display:flex;align-items:center;justify-content:center;font-size:20px;
+    box-shadow:0 0 16px rgba(139,92,246,.3),inset 0 1px 0 rgba(255,255,255,.12);
+  }
+  #s2 .pain-title { font-size:14px;font-weight:700;margin-bottom:5px; }
+  #s2 .pain-desc  { font-size:12px;color:var(--text-muted);line-height:1.5; }
+
+  /* ══════════════════════════════════
+     SLIDE 3
+  ══════════════════════════════════ */
+  #s3 { background:linear-gradient(160deg,#07041a 0%,#05030e 60%,#0d0320 100%); }
+  #s3 .content { position:relative;z-index:2;width:100%;height:100%;display:flex;align-items:center;padding:60px 80px;gap:60px; }
+  #s3 .cards { display:flex;flex-direction:column;gap:16px;flex:1; }
+  #s3 .sol-card { padding:20px 24px;display:flex;align-items:flex-start;gap:18px; }
+  #s3 .sol-num { font-size:10px;font-weight:800;letter-spacing:.16em;color:var(--accent);margin-bottom:4px;display:block;text-shadow:0 0 10px rgba(168,85,247,.7); }
+  #s3 .sol-icon {
+    width:50px;height:50px;border-radius:14px;flex-shrink:0;
+    background:linear-gradient(135deg,var(--purple-mid),var(--accent));
+    display:flex;align-items:center;justify-content:center;font-size:22px;
+    box-shadow:0 0 20px rgba(139,92,246,.5),0 0 40px rgba(139,92,246,.2),inset 0 1px 0 rgba(255,255,255,.2);
+  }
+  #s3 .sol-title { font-size:15px;font-weight:700;margin-bottom:5px; }
+  #s3 .sol-desc  { font-size:12px;color:var(--text-muted);line-height:1.55; }
+
+  /* ══════════════════════════════════
+     SLIDE 4
+  ══════════════════════════════════ */
+  #s4 { background:linear-gradient(135deg,#05030e 0%,#100520 100%); }
+  #s4 .content { position:relative;z-index:2;width:100%;height:100%;display:flex;align-items:center;padding:60px 80px;gap:60px; }
+  #s4 .left { flex:1.2;display:flex;flex-direction:column;gap:20px; }
+  #s4 .metrics-grid { display:grid;grid-template-columns:1fr 1fr;gap:18px; }
+  #s4 .metric-card { padding:28px 24px; }
+  #s4 .metric-val {
+    font-size:48px;font-weight:900;letter-spacing:-.03em;line-height:1;
+    background:linear-gradient(135deg,#fff 20%,var(--accent));
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+    filter:drop-shadow(0 0 12px rgba(168,85,247,.6));
+  }
+  #s4 .metric-unit { font-size:24px;font-weight:700; }
+  #s4 .metric-label { font-size:13px;color:var(--text-muted);margin-top:10px;font-weight:500; }
+  #s4 .metric-change {
+    display:inline-flex;align-items:center;gap:4px;
+    font-size:11px;font-weight:700;color:#4ade80;
+    background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.35);
+    padding:3px 10px;border-radius:100px;margin-top:10px;
+    box-shadow:0 0 10px rgba(74,222,128,.2);
+  }
+
+  /* ══════════════════════════════════
+     SLIDE 5
+  ══════════════════════════════════ */
+  #s5 { background:linear-gradient(140deg,#05030e 0%,#0c0420 100%); }
+  #s5 .content { position:relative;z-index:2;width:100%;height:100%;display:flex;align-items:center;padding:60px 80px;gap:60px; }
+  #s5 .team-grid { flex:1.2;display:grid;grid-template-columns:1fr 1fr;gap:18px; }
+  #s5 .member { padding:28px 22px;text-align:center; }
+  #s5 .avatar {
+    width:76px;height:76px;border-radius:50%;margin:0 auto 16px;
+    background:linear-gradient(135deg,var(--purple-mid),var(--accent));
+    display:flex;align-items:center;justify-content:center;
+    font-size:26px;font-weight:800;
+    box-shadow:0 0 0 3px rgba(139,92,246,.3),0 0 30px rgba(139,92,246,.45),0 0 60px rgba(139,92,246,.2);
+    border:2px solid rgba(139,92,246,.5);
+  }
+  #s5 .member-name { font-size:15px;font-weight:700;margin-bottom:4px; }
+  #s5 .member-role { font-size:12px;color:var(--accent);font-weight:700;margin-bottom:8px;text-shadow:0 0 10px rgba(168,85,247,.6); }
+  #s5 .member-bio  { font-size:11px;color:var(--text-muted);line-height:1.55; }
+
+  /* ══════════════════════════════════
+     SLIDE 6
+  ══════════════════════════════════ */
+  #s6 { background:linear-gradient(135deg,#05030e 0%,#0f0720 55%,#05030e 100%); }
+  #s6 .content { position:relative;z-index:2;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:80px; }
+  #s6 h2 {
+    font-size:72px;font-weight:900;letter-spacing:-.03em;line-height:1.0;
+    background:linear-gradient(135deg,#fff 0%,var(--purple-light) 35%,var(--accent) 70%,var(--accent2) 100%);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+    margin-bottom:24px; filter:drop-shadow(0 0 40px rgba(168,85,247,.5));
+  }
+  #s6 .sub { font-size:18px;color:var(--text-muted);margin-bottom:52px;max-width:480px;line-height:1.6; }
+  #s6 .contact-row { display:flex;gap:24px;margin-bottom:52px; }
+  #s6 .contact-item { padding:18px 28px;text-align:left; }
+  #s6 .contact-label { font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:5px;text-shadow:0 0 10px rgba(168,85,247,.6); }
+  #s6 .contact-val { font-size:15px;font-weight:600; }
+  #s6 .logo-text { font-size:26px;font-weight:900;letter-spacing:.05em; background:linear-gradient(135deg,#fff,var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 20px rgba(168,85,247,.5)); }
+
+  @media (max-width:1340px) { .deck { zoom:calc(100vw / 1280); } }
+</style>
+</head>
+<body>
+<div class="deck">
+
+<!-- ═══════════════════════════
+     SHARED CUBE TEMPLATE (macro)
+     Rendered inline per-slide
+═══════════════════════════ -->
+
+<!-- ══ S1: TITLE ══ -->
+<section class="slide active" id="s1">
+  <div class="orb orb-a"></div>
+  <div class="orb orb-b"></div>
+  <div class="orb orb-c"></div>
+  <div class="grid-lines"></div>
+
+  <div class="content">
+    <div class="badge"><span class="badge-dot"></span>SEED ROUND 2026</div>
+    <h1>Build the Future<br>Together</h1>
+    <p class="subtitle">A next-generation platform that transforms how teams collaborate, create, and scale in the modern era.</p>
+    <div class="cta-row">
+      <button class="btn-primary">View Deck →</button>
+      <button class="btn-secondary">Learn More</button>
+    </div>
+  </div>
+
+  <!-- Holographic Glass Cube — large -->
+  <div class="cube-wrap" style="right:110px;">
+    <div class="cube-scene">
+      <div class="holo-cube" style="--cs:230px;width:230px;height:230px;">
+        <div class="hf hf-front"></div><div class="hf hf-back"></div>
+        <div class="hf hf-right"></div><div class="hf hf-left"></div>
+        <div class="hf hf-top"></div>  <div class="hf hf-bottom"></div>
+      </div>
+    </div>
+    <div class="cube-shadow" style="width:180px;height:30px;"></div>
+  </div>
+
+  <!-- Floating stats card -->
+  <div class="float-card glass">
+    <div class="fc-val">$4.2M</div>
+    <div class="fc-label">Annual Recurring Revenue</div>
+    <div class="fc-divider"></div>
+    <div class="fc-val">320%</div>
+    <div class="fc-label">YoY Growth Rate</div>
+    <div class="fc-divider"></div>
+    <div class="fc-val">12K+</div>
+    <div class="fc-label">Active Customers</div>
+  </div>
+
+  <div class="sparkle" style="top:15%;left:34%;animation-delay:0s"></div>
+  <div class="sparkle" style="top:70%;left:20%;animation-delay:.8s"></div>
+  <div class="sparkle" style="top:82%;left:50%;animation-delay:2s"></div>
+</section>
+
+
+<!-- ══ S2: PROBLEM ══ -->
+<section class="slide" id="s2">
+  <div class="orb orb-a" style="width:400px;height:400px;top:-100px;left:-60px;"></div>
+  <div class="orb orb-c"></div>
+  <div class="grid-lines"></div>
+
+  <div class="content">
+    <div class="left">
+      <div class="section-tag">The Problem</div>
+      <h2 class="section-h2">Teams are<br>stuck in chaos</h2>
+      <p style="font-size:16px;color:var(--text-muted);line-height:1.7;margin-bottom:32px;">Modern teams waste over <strong style="color:#fff;">30% of their time</strong> on fragmented tools, redundant workflows, and disconnected data — costing billions in lost productivity every year.</p>
+
+      <!-- Cube — medium, bottom-left of the left panel -->
+      <div class="cube-wrap" style="position:relative;right:auto;top:auto;transform:none;display:inline-block;">
+        <div class="cube-scene">
+          <div class="holo-cube" style="--cs:150px;width:150px;height:150px;animation-duration:16s;">
+            <div class="hf hf-front"></div><div class="hf hf-back"></div>
+            <div class="hf hf-right"></div><div class="hf hf-left"></div>
+            <div class="hf hf-top"></div>  <div class="hf hf-bottom"></div>
+          </div>
+        </div>
+        <div class="cube-shadow" style="width:120px;height:20px;"></div>
+      </div>
+    </div>
+
+    <div class="right">
+      <div class="pain-card glass">
+        <div class="pain-icon">⏱️</div>
+        <div>
+          <div class="pain-title">Wasted Time</div>
+          <div class="pain-desc">Employees switch between 9+ tools daily, losing focus and momentum with every context switch.</div>
+        </div>
+      </div>
+      <div class="pain-card glass">
+        <div class="pain-icon">💸</div>
+        <div>
+          <div class="pain-title">Hidden Costs</div>
+          <div class="pain-desc">Siloed subscriptions and duplicate work inflate operational costs by up to 40%.</div>
+        </div>
+      </div>
+      <div class="pain-card glass">
+        <div class="pain-icon">📉</div>
+        <div>
+          <div class="pain-title">Lost Insights</div>
+          <div class="pain-desc">Critical data trapped in disconnected systems means decisions are slow and often wrong.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ══ S3: SOLUTION ══ -->
+<section class="slide" id="s3">
+  <div class="orb orb-b"></div>
+  <div class="orb orb-c" style="top:-60px;right:200px;"></div>
+  <div class="grid-lines"></div>
+
+  <div class="content">
+    <!-- Cube on the left, centered vertically -->
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;">
+      <div>
+        <div class="section-tag">Our Solution</div>
+        <h2 class="section-h2">One platform,<br>infinite possibilities</h2>
+        <p class="section-sub">We unify your entire workflow in a single, AI-powered workspace.</p>
+      </div>
+
+      <div class="cube-wrap" style="position:relative;right:auto;top:auto;transform:none;align-self:flex-start;margin-top:8px;">
+        <div class="cube-scene">
+          <div class="holo-cube" style="--cs:190px;width:190px;height:190px;animation-duration:25s;animation-direction:reverse;">
+            <div class="hf hf-front"></div><div class="hf hf-back"></div>
+            <div class="hf hf-right"></div><div class="hf hf-left"></div>
+            <div class="hf hf-top"></div>  <div class="hf hf-bottom"></div>
+          </div>
+        </div>
+        <div class="cube-shadow" style="width:150px;height:24px;"></div>
+      </div>
+    </div>
+
+    <div class="cards">
+      <div class="sol-card glass">
+        <div class="sol-icon">🧠</div>
+        <div><span class="sol-num">01</span><div class="sol-title">AI-Powered Engine</div><div class="sol-desc">Intelligent automation handles repetitive tasks so your team can focus on what matters.</div></div>
+      </div>
+      <div class="sol-card glass">
+        <div class="sol-icon">🔗</div>
+        <div><span class="sol-num">02</span><div class="sol-title">Unified Integration</div><div class="sol-desc">Connect every tool you use — 200+ native integrations with zero-config setup.</div></div>
+      </div>
+      <div class="sol-card glass">
+        <div class="sol-icon">⚡</div>
+        <div><span class="sol-num">03</span><div class="sol-title">Real-time Insights</div><div class="sol-desc">Live dashboards and predictive analytics that surface the right data at the right time.</div></div>
+      </div>
+      <div class="sol-card glass">
+        <div class="sol-icon">🛡️</div>
+        <div><span class="sol-num">04</span><div class="sol-title">Enterprise Security</div><div class="sol-desc">SOC 2 Type II certified with end-to-end encryption and granular access controls.</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ══ S4: TRACTION ══ -->
+<section class="slide" id="s4">
+  <div class="orb orb-a" style="width:550px;height:550px;top:-140px;left:-100px;"></div>
+  <div class="orb orb-b"></div>
+  <div class="grid-lines"></div>
+
+  <div class="content">
+    <div class="left">
+      <div class="section-tag">Traction</div>
+      <h2 class="section-h2">Numbers<br>that speak</h2>
+      <p class="section-sub" style="margin-bottom:28px;">Consistent, accelerating growth across every key metric.</p>
+      <div class="metrics-grid">
+        <div class="metric-card glass">
+          <div class="metric-val">$4.2<span class="metric-unit">M</span></div>
+          <div class="metric-label">Annual Recurring Revenue</div>
+          <div class="metric-change">↑ 320% YoY</div>
+        </div>
+        <div class="metric-card glass">
+          <div class="metric-val">12<span class="metric-unit">K</span></div>
+          <div class="metric-label">Active Customers</div>
+          <div class="metric-change">↑ 180% YoY</div>
+        </div>
+        <div class="metric-card glass">
+          <div class="metric-val">97<span class="metric-unit">%</span></div>
+          <div class="metric-label">Net Revenue Retention</div>
+          <div class="metric-change">↑ 8pts YoY</div>
+        </div>
+        <div class="metric-card glass">
+          <div class="metric-val">4.9<span class="metric-unit">★</span></div>
+          <div class="metric-label">Product Rating</div>
+          <div class="metric-change">2,400 reviews</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cube right -->
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;">
+      <div class="cube-wrap" style="position:relative;right:auto;top:auto;transform:none;">
+        <div class="cube-scene">
+          <div class="holo-cube" style="--cs:210px;width:210px;height:210px;animation-duration:19s;">
+            <div class="hf hf-front"></div><div class="hf hf-back"></div>
+            <div class="hf hf-right"></div><div class="hf hf-left"></div>
+            <div class="hf hf-top"></div>  <div class="hf hf-bottom"></div>
+          </div>
+        </div>
+        <div class="cube-shadow" style="width:165px;height:28px;"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ══ S5: TEAM ══ -->
+<section class="slide" id="s5">
+  <div class="orb orb-a"></div>
+  <div class="orb orb-c"></div>
+  <div class="grid-lines"></div>
+
+  <div class="content">
+    <!-- Left: heading + cube -->
+    <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:28px;">
+      <div>
+        <div class="section-tag">The Team</div>
+        <h2 class="section-h2">World-class<br>founders</h2>
+        <p class="section-sub">Built by operators who have scaled companies from zero to exit.</p>
+      </div>
+      <div class="cube-wrap" style="position:relative;right:auto;top:auto;transform:none;align-self:flex-start;">
+        <div class="cube-scene">
+          <div class="holo-cube" style="--cs:175px;width:175px;height:175px;animation-duration:27s;animation-direction:reverse;">
+            <div class="hf hf-front"></div><div class="hf hf-back"></div>
+            <div class="hf hf-right"></div><div class="hf hf-left"></div>
+            <div class="hf hf-top"></div>  <div class="hf hf-bottom"></div>
+          </div>
+        </div>
+        <div class="cube-shadow" style="width:140px;height:22px;"></div>
+      </div>
+    </div>
+
+    <div class="team-grid">
+      <div class="member glass">
+        <div class="avatar">JS</div>
+        <div class="member-name">Jamie Seo</div>
+        <div class="member-role">CEO & Co-Founder</div>
+        <div class="member-bio">Ex-Google PM. Led product for 200M+ user platform. Stanford MBA.</div>
+      </div>
+      <div class="member glass">
+        <div class="avatar">MK</div>
+        <div class="member-name">Morgan Kim</div>
+        <div class="member-role">CTO & Co-Founder</div>
+        <div class="member-bio">Ex-Stripe engineer. Built core payments infra. MIT CS.</div>
+      </div>
+      <div class="member glass">
+        <div class="avatar">AL</div>
+        <div class="member-name">Alex Lin</div>
+        <div class="member-role">Head of Growth</div>
+        <div class="member-bio">Ex-Figma GTM. Scaled from $0 to $100M ARR in 3 years.</div>
+      </div>
+      <div class="member glass">
+        <div class="avatar">SP</div>
+        <div class="member-name">Sara Park</div>
+        <div class="member-role">Head of Design</div>
+        <div class="member-bio">Ex-Apple HIG team. Award-winning product designer.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ══ S6: CTA ══ -->
+<section class="slide" id="s6">
+  <div class="orb orb-a" style="width:700px;height:700px;top:-200px;left:50%;transform:translateX(-50%);"></div>
+  <div class="orb orb-b"></div>
+  <div class="grid-lines"></div>
+
+  <!-- Large cube — background right -->
+  <div class="cube-wrap" style="right:30px;opacity:.55;z-index:1;">
+    <div class="cube-scene">
+      <div class="holo-cube" style="--cs:300px;width:300px;height:300px;animation-duration:30s;">
+        <div class="hf hf-front"></div><div class="hf hf-back"></div>
+        <div class="hf hf-right"></div><div class="hf hf-left"></div>
+        <div class="hf hf-top"></div>  <div class="hf hf-bottom"></div>
+      </div>
+    </div>
+    <div class="cube-shadow" style="width:240px;height:36px;"></div>
+  </div>
+
+  <div class="content">
+    <h2>Let's build<br>the future.</h2>
+    <p class="sub">We're raising $8M to scale our team and accelerate product development. Join us.</p>
+    <div class="contact-row">
+      <div class="contact-item glass">
+        <div class="contact-label">Email</div>
+        <div class="contact-val">hello@venture.io</div>
+      </div>
+      <div class="contact-item glass">
+        <div class="contact-label">Website</div>
+        <div class="contact-val">www.venture.io</div>
+      </div>
+      <div class="contact-item glass">
+        <div class="contact-label">Round</div>
+        <div class="contact-val">Seed · $8M</div>
+      </div>
+    </div>
+    <div class="logo-text">VENTURE</div>
+  </div>
+
+  <div class="sparkle" style="top:18%;left:22%;animation-delay:0s"></div>
+  <div class="sparkle" style="top:78%;left:72%;animation-delay:.6s"></div>
+  <div class="sparkle" style="top:50%;left:42%;animation-delay:1.3s"></div>
+  <div class="sparkle" style="top:30%;left:60%;animation-delay:1.9s"></div>
+</section>
+
+</div><!-- /deck -->
+
+<div class="nav">
+  <button class="nav-btn" id="prev">&#8592;</button>
+  <div class="nav-dots" id="dots"></div>
+  <button class="nav-btn" id="next">&#8594;</button>
+</div>
+<div class="counter" id="counter">1 / 6</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const dotsEl = document.getElementById('dots');
+  const counter = document.getElementById('counter');
+  let cur = 0;
+
+  slides.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' active' : '');
+    d.addEventListener('click', () => goTo(i));
+    dotsEl.appendChild(d);
+  });
+
+  function goTo(n) {
+    slides[cur].classList.remove('active');
+    slides[cur].classList.add('exit');
+    const prev = cur;
+    setTimeout(() => slides[prev].classList.remove('exit'), 650);
+    cur = (n + slides.length) % slides.length;
+    slides[cur].classList.add('active');
+    document.querySelectorAll('.dot').forEach((d,i) => d.classList.toggle('active', i===cur));
+    counter.textContent = (cur+1) + ' / ' + slides.length;
+  }
+
+  document.getElementById('next').addEventListener('click', () => goTo(cur+1));
+  document.getElementById('prev').addEventListener('click', () => goTo(cur-1));
+  document.addEventListener('keydown', e => {
+    if (e.key==='ArrowRight'||e.key==='ArrowDown') goTo(cur+1);
+    if (e.key==='ArrowLeft' ||e.key==='ArrowUp')   goTo(cur-1);
+  });
+  let tx = 0;
+  document.addEventListener('touchstart', e => tx = e.touches[0].clientX);
+  document.addEventListener('touchend',   e => {
+    const dx = tx - e.changedTouches[0].clientX;
+    if (Math.abs(dx) > 50) dx > 0 ? goTo(cur+1) : goTo(cur-1);
+  });
+</script>
+</body>
+</html>
